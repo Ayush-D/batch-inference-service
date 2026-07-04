@@ -70,11 +70,21 @@ public class BatchProcessingService {
     }
 
     /** Runs on an orchestrator thread, not the request thread. */
+
+    /*
+    Mark it RUNNING so the status endpoint shows it's in progress.
+    Send every prompt to the worker pool — it makes one small task per prompt and drops them into the 8-thread pool to run in parallel. For each one it keeps a little "receipt" (a CompletableFuture) so it can track completion.
+    Wait for all of them to finish — allOf(...).join() just pauses here until the last prompt is done. While it waits, each worker saves its own result to the database and bumps the counters.
+    Optionally write the JSON file of results.
+    Mark it COMPLETED — or FAILED if something went wrong (the catch).
+    finally: stamp the finish time — this always runs, success or failure, so the job can be cleaned up later.
+    */
     void runBatch(BatchJob job, List<String> prompts) {
         job.setStatus(JobStatus.RUNNING);
         try {
             List<CompletableFuture<Void>> futures = new ArrayList<>(prompts.size());
             for (String prompt : prompts) {
+                // Each task does a DB write (repository.save) when it finishes.
                 InferenceTask task = new InferenceTask(job, prompt, client, props, repository);
                 futures.add(CompletableFuture.runAsync(task, workerExecutor));
             }
@@ -95,6 +105,7 @@ public class BatchProcessingService {
     }
 
     public List<PromptResult> getResults(String jobId) {
+        // DB read: called on demand by GET /api/batches/{id}/results.
         return repository.findByJobId(jobId);
     }
 
@@ -103,6 +114,7 @@ public class BatchProcessingService {
             Path dir = Path.of(props.getOutputDir());
             Files.createDirectories(dir);
             Path file = dir.resolve("results-" + job.getId() + ".json");
+            // DB read: fetch all saved results for this job to export as JSON.
             List<PromptResult> results = repository.findByJobId(job.getId());
             objectMapper.writerWithDefaultPrettyPrinter().writeValue(file.toFile(), results);
             log.info("Wrote {} result(s) to {}", results.size(), file.toAbsolutePath());
