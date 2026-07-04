@@ -1,0 +1,46 @@
+# DigitalOcean App Platform spec (reference copy).
+# The app is created/updated via the DigitalOcean MCP (apps-create-app-from-spec).
+#
+# NOTE: The live deploy uses the "git" clone-URL source below because the
+# DigitalOcean GitHub app was not authorized on the account. To enable
+# auto-deploy-on-push instead, authorize DigitalOcean in GitHub, then swap the
+# "git" block for:
+#     github:
+#       repo: Ayush-D/batch-inference-service
+#       branch: main
+#       deploy_on_push: true
+name: batch-inference-service
+region: blr
+services:
+  - name: api
+    git:
+      repo_clone_url: https://github.com/Ayush-D/batch-inference-service.git
+      branch: main
+    dockerfile_path: Dockerfile
+    http_port: 8080
+    instance_size_slug: apps-s-1vcpu-0.5gb
+    instance_count: 1
+    health_check:
+      http_path: /actuator/health
+    envs:
+      - key: SPRING_PROFILES_ACTIVE
+        value: cloud
+      - key: APP_POOL_SIZE
+        value: "8"
+      - key: APP_MAX_RETRIES
+        value: "3"
+      # Database connection, injected from the managed dev Postgres below.
+      - key: DB_HOST
+        value: ${db.HOSTNAME}
+      - key: DB_PORT
+        value: ${db.PORT}
+      - key: DB_NAME
+        value: ${db.DATABASE}
+      - key: DB_USER
+        value: ${db.USERNAME}
+      - key: DB_PASSWORD
+        value: ${db.PASSWORD}
+databases:
+  - name: db
+    engine: PG
+    production: false

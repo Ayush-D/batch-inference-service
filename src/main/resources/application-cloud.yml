@@ -1,0 +1,14 @@
+# Cloud profile: PostgreSQL. Connection details are injected by DigitalOcean
+# App Platform from the managed dev database (see .do/app.yaml).
+spring:
+  datasource:
+    url: jdbc:postgresql://${DB_HOST}:${DB_PORT}/${DB_NAME}?sslmode=require
+    username: ${DB_USER}
+    password: ${DB_PASSWORD}
+    driver-class-name: org.postgresql.Driver
+  jpa:
+    database-platform: org.hibernate.dialect.PostgreSQLDialect
+    hibernate:
+      # Normally "update". Override with DDL_AUTO=create once to rebuild the
+      # schema after a column-type change, then switch back to update.
+      ddl-auto: ${DDL_AUTO:update}

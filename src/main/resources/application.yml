@@ -1,0 +1,30 @@
+spring:
+  application:
+    name: batch-inference-service
+  profiles:
+    default: local
+  jpa:
+    hibernate:
+      ddl-auto: update
+    open-in-view: false
+
+server:
+  port: 8080
+
+management:
+  endpoints:
+    web:
+      exposure:
+        include: health,info
+
+# Tunable settings. Each maps to an env var via relaxed binding, e.g. APP_POOL_SIZE.
+app:
+  pool-size: ${APP_POOL_SIZE:8}
+  queue-capacity: ${APP_QUEUE_CAPACITY:100}
+  max-retries: ${APP_MAX_RETRIES:3}
+  base-backoff-ms: ${APP_BASE_BACKOFF_MS:200}
+  rate-limit-probability: ${APP_RATE_LIMIT_PROBABILITY:0.2}
+  simulated-latency-ms: ${APP_SIMULATED_LATENCY_MS:50}
+  output-dir: ${APP_OUTPUT_DIR:output}
+  write-json: ${APP_WRITE_JSON:true}
+  job-retention-minutes: ${APP_JOB_RETENTION_MINUTES:30}
